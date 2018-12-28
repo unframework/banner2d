@@ -2,41 +2,39 @@ const planck = require('planck-js');
 
 require('planck-js/testbed');
 
-planck.testbed('Banner', function (testbed) {
-    const world = new planck.World({
-        gravity: planck.Vec2(0, 0)
-    });
+class BannerWorld {
+    constructor() {
+        this._ballFD = {
+            density : 1.0,
+            friction : 0.6
+        };
 
-    const ballFD = {
-        density : 1.0,
-        friction : 0.6
-    };
+        this._world = new planck.World({
+            gravity: planck.Vec2(0, 0)
+        });
 
-    const distanceJD = {
-        frequencyHz: 2.0,
-        dampingRatio: 0.5
-    };
+        this._bodyList = [];
 
-    const bodyList = [];
+        this._spawnCountdown = 0;
+    }
 
-    let spawnCountdown = 0;
-
-    testbed.step = function (dtms) {
-        const dt = dtms / 1000;
+    step(dt) {
+        const world = this._world;
+        const bodyList = this._bodyList;
 
         // spawn new bodies
-        spawnCountdown -= dt;
+        this._spawnCountdown -= dt;
 
-        if (spawnCountdown < 0) {
+        if (this._spawnCountdown < 0) {
             // check if spawn area is too crowded
             const readyForSpawn = bodyList.length === 0 || bodyList[bodyList.length - 1].getPosition().x > 0.1;
 
             if (readyForSpawn) {
-                spawnCountdown += 0.4;
+                this._spawnCountdown += 0.4;
 
                 const radius = 0.4;
                 const body = world.createDynamicBody(planck.Vec2(Math.random() * 0.2 - 0.1, Math.random() * 0.2 - 0.1))
-                const fixture = body.createFixture(planck.Circle(radius), ballFD);
+                const fixture = body.createFixture(planck.Circle(radius), this._ballFD);
                 body.setLinearVelocity(planck.Vec2(2.5, Math.random() * 1.5 - 0.75));
 
                 body.data = {
@@ -61,7 +59,7 @@ planck.testbed('Banner', function (testbed) {
 
                 bodyList.push(body);
             } else {
-                spawnCountdown += 0.1; // do another check soon
+                this._spawnCountdown += 0.1; // do another check soon
             }
         }
 
@@ -73,7 +71,7 @@ planck.testbed('Banner', function (testbed) {
                 body.data.sizeCountdown += 0.5 + Math.random() * 0.8;
 
                 const nextRadius = body.data.radius + (4 - body.data.radius) * Math.random() * 0.1;
-                const nextFixture = body.createFixture(planck.Circle(nextRadius), ballFD);
+                const nextFixture = body.createFixture(planck.Circle(nextRadius), this._ballFD);
 
                 body.destroyFixture(body.data.fixture);
 
@@ -102,11 +100,21 @@ planck.testbed('Banner', function (testbed) {
                 bodyList.splice(0, 1);
             }
         }
+    }
+}
+
+planck.testbed('Banner', function (testbed) {
+    const main = new BannerWorld();
+
+    testbed.step = function (dtms) {
+        const dt = dtms / 1000;
+
+        main.step(dt);
     };
 
     testbed.x = 0;
     testbed.y = 0;
     testbed.info('Banner animation');
 
-    return world;
+    return main._world;
 });
