@@ -1,0 +1,15 @@
+{
+  "name": "banner2d",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Nick Matantsev <nick.matantsev@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "planck-js": "^0.3.0-rc.2",
+    "stage-js": "^0.8.10"
+  }
+}
