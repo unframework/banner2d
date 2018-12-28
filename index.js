@@ -12,8 +12,12 @@ planck.testbed('Banner', function (testbed) {
         friction : 0.6
     };
 
+    const distanceJD = {
+        frequencyHz: 2.0,
+        dampingRatio: 0.5
+    };
+
     const bodyList = [];
-    const deletionIndexList = []; // reusable instance
 
     let spawnCountdown = 0;
 
@@ -24,17 +28,31 @@ planck.testbed('Banner', function (testbed) {
         spawnCountdown -= dt;
 
         if (spawnCountdown < 0) {
-            spawnCountdown += 2;
+            spawnCountdown += 0.8;
 
             const radius = 0.4;
             const body = world.createDynamicBody(planck.Vec2(Math.random() * 0.2 - 0.1, Math.random() * 0.2 - 0.1))
             const fixture = body.createFixture(planck.Circle(radius), ballFD);
 
             body.data = {
+                prevJoint: null,
+                nextJoint: null,
                 sizeCountdown: 0,
                 radius: radius,
                 fixture: fixture
             };
+
+            if (bodyList.length > 0) {
+                const prevBody = bodyList[bodyList.length - 1];
+
+                prevBody.data.nextJoint = body.data.prevJoint = world.createJoint(planck.DistanceJoint({
+                    bodyA: prevBody,
+                    localAnchorA: planck.Vec2(0, 0),
+                    bodyB: body,
+                    localAnchorB: planck.Vec2(0, 0),
+                    length: prevBody.data.radius + radius
+                }));
+            }
 
             bodyList.push(body);
         }
@@ -44,7 +62,7 @@ planck.testbed('Banner', function (testbed) {
             body.data.sizeCountdown -= dt;
 
             if (body.data.sizeCountdown < 0) {
-                body.data.sizeCountdown += 0.5 + Math.random() * 0.5;
+                body.data.sizeCountdown += 0.2 + Math.random() * 0.5;
 
                 const nextRadius = body.data.radius * (1 + Math.random() * 0.1);
                 const nextFixture = body.createFixture(planck.Circle(nextRadius), ballFD);
@@ -53,22 +71,29 @@ planck.testbed('Banner', function (testbed) {
 
                 body.data.fixture = nextFixture;
                 body.data.radius = nextRadius;
-            }
 
-            const position = body.getPosition();
+                if (index > 0) {
+                    const prevBody = bodyList[index - 1];
+                    body.data.prevJoint.setLength(prevBody.data.radius + nextRadius);
+                }
+
+                if (index < bodyList.length - 1) {
+                    const nextBody = bodyList[index + 1];
+                    body.data.nextJoint.setLength(nextBody.data.radius + nextRadius);
+                }
+            }
+        });
+
+        // eliminate furthest offscreen bubble in the chain
+        if (bodyList.length > 0) {
+            const lastBody = bodyList[0];
+            const position = lastBody.getPosition();
 
             if (position.x > 10) {
-                deletionIndexList.push(index);
+                world.destroyBody(lastBody);
+                bodyList.splice(0, 1);
             }
-        });
-
-        // clean up bodies marked for deletion
-        deletionIndexList.forEach(bodyIndex => {
-            world.destroyBody(bodyList[bodyIndex]);
-            bodyList.splice(bodyIndex, 1);
-        });
-
-        deletionIndexList.length = 0; // clean out temporary state
+        }
     };
 
     testbed.x = 0;
