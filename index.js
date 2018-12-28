@@ -103,18 +103,61 @@ class BannerWorld {
     }
 }
 
-planck.testbed('Banner', function (testbed) {
-    const main = new BannerWorld();
+const canvas = document.createElement('canvas');
+canvas.style.position = 'absolute';
+canvas.style.top = '0vh';
+canvas.style.left = '0vw';
+canvas.style.width = '100vw';
+canvas.style.height = '100vh';
+document.body.appendChild(canvas);
 
-    testbed.step = function (dtms) {
-        const dt = dtms / 1000;
+const bufferWidth = canvas.offsetWidth;
+const bufferHeight = canvas.offsetHeight;
+const aspectRatio = bufferWidth / bufferHeight;
+canvas.width = bufferWidth;
+canvas.height = bufferHeight;
 
-        main.step(dt);
-    };
+const ctx = canvas.getContext('2d');
 
-    testbed.x = 0;
-    testbed.y = 0;
-    testbed.info('Banner animation');
+const main = new BannerWorld();
 
-    return main._world;
-});
+function renderer() {
+    const dt = 1 / 60.0;
+    main._world.step(dt);
+    main.step(dt);
+
+    ctx.fillStyle = '#222';
+    ctx.fillRect(0, 0, bufferWidth, bufferHeight);
+
+    ctx.save();
+
+    ctx.translate(bufferWidth / 2, bufferHeight / 2);
+    ctx.scale(bufferHeight / 20, bufferHeight / 20);
+
+    main._bodyList.forEach(body => {
+        const pos = body.getPosition();
+
+        ctx.fillStyle = '#ca4';
+        ctx.fillRect(pos.x - 2, pos.y - 2, 0.1, 0.1);
+    });
+
+    ctx.restore();
+
+    window.requestAnimationFrame(renderer);
+}
+
+renderer();
+
+// planck.testbed('Banner', function (testbed) {
+//     testbed.step = function (dtms) {
+//         const dt = dtms / 1000;
+
+//         main.step(dt);
+//     };
+
+//     testbed.x = 0;
+//     testbed.y = 0;
+//     testbed.info('Banner animation');
+
+//     return main._world;
+// });
