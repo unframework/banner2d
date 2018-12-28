@@ -4,7 +4,7 @@ require('planck-js/testbed');
 
 planck.testbed('Banner', function (testbed) {
     const world = new planck.World({
-        gravity: planck.Vec2(0.2, 0)
+        gravity: planck.Vec2(0, 0)
     });
 
     const ballFD = {
@@ -28,33 +28,41 @@ planck.testbed('Banner', function (testbed) {
         spawnCountdown -= dt;
 
         if (spawnCountdown < 0) {
-            spawnCountdown += 0.8;
+            // check if spawn area is too crowded
+            const readyForSpawn = bodyList.length === 0 || bodyList[bodyList.length - 1].getPosition().x > 0.1;
 
-            const radius = 0.4;
-            const body = world.createDynamicBody(planck.Vec2(Math.random() * 0.2 - 0.1, Math.random() * 0.2 - 0.1))
-            const fixture = body.createFixture(planck.Circle(radius), ballFD);
+            if (readyForSpawn) {
+                spawnCountdown += 0.4;
 
-            body.data = {
-                prevJoint: null,
-                nextJoint: null,
-                sizeCountdown: 0,
-                radius: radius,
-                fixture: fixture
-            };
+                const radius = 0.4;
+                const body = world.createDynamicBody(planck.Vec2(Math.random() * 0.2 - 0.1, Math.random() * 0.2 - 0.1))
+                const fixture = body.createFixture(planck.Circle(radius), ballFD);
+                body.setLinearVelocity(planck.Vec2(2.5, Math.random() * 1.5 - 0.75));
 
-            if (bodyList.length > 0) {
-                const prevBody = bodyList[bodyList.length - 1];
+                body.data = {
+                    prevJoint: null,
+                    nextJoint: null,
+                    sizeCountdown: 0,
+                    radius: radius,
+                    fixture: fixture
+                };
 
-                prevBody.data.nextJoint = body.data.prevJoint = world.createJoint(planck.DistanceJoint({
-                    bodyA: prevBody,
-                    localAnchorA: planck.Vec2(0, 0),
-                    bodyB: body,
-                    localAnchorB: planck.Vec2(0, 0),
-                    length: prevBody.data.radius + radius
-                }));
+                if (bodyList.length > 0) {
+                    const prevBody = bodyList[bodyList.length - 1];
+
+                    prevBody.data.nextJoint = body.data.prevJoint = world.createJoint(planck.DistanceJoint({
+                        bodyA: prevBody,
+                        localAnchorA: planck.Vec2(0, 0),
+                        bodyB: body,
+                        localAnchorB: planck.Vec2(0, 0),
+                        length: prevBody.data.radius + radius
+                    }));
+                }
+
+                bodyList.push(body);
+            } else {
+                spawnCountdown += 0.1; // do another check soon
             }
-
-            bodyList.push(body);
         }
 
         // process each moving body
@@ -62,9 +70,9 @@ planck.testbed('Banner', function (testbed) {
             body.data.sizeCountdown -= dt;
 
             if (body.data.sizeCountdown < 0) {
-                body.data.sizeCountdown += 0.2 + Math.random() * 0.5;
+                body.data.sizeCountdown += 0.5 + Math.random() * 0.8;
 
-                const nextRadius = body.data.radius * (1 + Math.random() * 0.1);
+                const nextRadius = body.data.radius + (4 - body.data.radius) * Math.random() * 0.1;
                 const nextFixture = body.createFixture(planck.Circle(nextRadius), ballFD);
 
                 body.destroyFixture(body.data.fixture);
@@ -89,7 +97,7 @@ planck.testbed('Banner', function (testbed) {
             const lastBody = bodyList[0];
             const position = lastBody.getPosition();
 
-            if (position.x > 10) {
+            if (position.x > 20) {
                 world.destroyBody(lastBody);
                 bodyList.splice(0, 1);
             }
