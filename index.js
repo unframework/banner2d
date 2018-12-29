@@ -10,7 +10,13 @@ class BannerWorld {
         };
 
         this._world = new planck.World({
-            gravity: planck.Vec2(0, 0)
+            gravity: planck.Vec2(0.1, 0)
+        });
+
+        this._ground = this._world.createBody();
+        this._ground.createFixture(planck.Edge(planck.Vec2(-0.1, -50), planck.Vec2(-0.1, 50)), {
+            density: 0,
+            friction: 0.6
         });
 
         this._bodyList = [];
@@ -28,15 +34,15 @@ class BannerWorld {
 
         if (this._spawnCountdown < 0) {
             // check if spawn area is too crowded
-            const readyForSpawn = bodyList.length === 0 || bodyList[bodyList.length - 1].getPosition().x > 0.1;
+            const readyForSpawn = bodyList.length === 0 || bodyList[bodyList.length - 1].getPosition().x - bodyList[bodyList.length - 1].data.radius > 0.5;
 
             if (readyForSpawn) {
                 this._spawnCountdown += 0.4;
 
-                const radius = 0.4;
-                const body = world.createDynamicBody(planck.Vec2(Math.random() * 0.2 - 0.1, Math.random() * 0.2 - 0.1))
+                const radius = 0.2;
+                const body = world.createDynamicBody(planck.Vec2(0, Math.random() * 0.1 - 0.05))
                 const fixture = body.createFixture(planck.Circle(radius), this._ballFD);
-                body.setLinearVelocity(planck.Vec2(2.5, Math.random() * 1.5 - 0.75));
+                body.setLinearVelocity(planck.Vec2(1.5, this._startingDirection * Math.random() * 1.5));
 
                 body.data = {
                     prevJoint: null,
@@ -50,6 +56,9 @@ class BannerWorld {
                     const prevBody = bodyList[bodyList.length - 1];
 
                     prevBody.data.nextJoint = body.data.prevJoint = world.createJoint(planck.DistanceJoint({
+                        collideConnected: true, // rigid minimum distance
+                        frequencyHz: 0.2,
+                        dampingRatio: 0.5,
                         bodyA: prevBody,
                         localAnchorA: planck.Vec2(0, 0),
                         bodyB: body,
@@ -70,9 +79,9 @@ class BannerWorld {
             body.data.sizeCountdown -= dt;
 
             if (body.data.sizeCountdown < 0) {
-                body.data.sizeCountdown += 0.5 + Math.random() * 0.8;
+                body.data.sizeCountdown += 0.1 + Math.random() * 0.3;
 
-                const nextRadius = body.data.radius + (4 - body.data.radius) * Math.random() * 0.1;
+                const nextRadius = body.data.radius + (2 - body.data.radius) * Math.random() * 0.05;
                 const nextFixture = body.createFixture(planck.Circle(nextRadius), this._ballFD);
 
                 body.destroyFixture(body.data.fixture);
@@ -191,18 +200,18 @@ function renderer() {
     window.requestAnimationFrame(renderer);
 }
 
-renderer();
+// renderer();
 
-// planck.testbed('Banner', function (testbed) {
-//     testbed.step = function (dtms) {
-//         const dt = dtms / 1000;
+planck.testbed('Banner', function (testbed) {
+    testbed.step = function (dtms) {
+        const dt = dtms / 1000;
 
-//         main.step(dt);
-//     };
+        main.step(dt);
+    };
 
-//     testbed.x = 0;
-//     testbed.y = 0;
-//     testbed.info('Banner animation');
+    testbed.x = 0;
+    testbed.y = 0;
+    testbed.info('Banner animation');
 
-//     return main._world;
-// });
+    return main._world;
+});
