@@ -134,12 +134,51 @@ function renderer() {
     ctx.translate(bufferWidth / 2, bufferHeight / 2);
     ctx.scale(bufferHeight / 20, bufferHeight / 20);
 
-    main._bodyList.forEach(body => {
-        const pos = body.getPosition();
+    const firstBodyIndex = main._bodyList.length - 1;
+    let bodyIndex = firstBodyIndex;
+    let segmentIndex = 0;
+    let azimuth = Math.PI;
+    const segmentDistance = 0.3;
 
-        ctx.fillStyle = '#ca4';
-        ctx.fillRect(pos.x - 2, pos.y - 2, 0.1, 0.1);
-    });
+    ctx.lineWidth = 0.05;
+    ctx.miterLimit = 2;
+    ctx.strokeStyle = '#f00';
+
+    ctx.beginPath();
+
+    while (bodyIndex > 0) {
+        const body = main._bodyList[bodyIndex];
+        const pos = body.getPosition();
+        const radius = body.data.radius;
+        const azimuthIncrement = segmentDistance / radius;
+
+        const nextBody = main._bodyList[bodyIndex - 1];
+        const nextPos = nextBody.getPosition();
+        const nextBodyAzimuth = Math.atan2(nextPos.y - pos.y, nextPos.x - pos.x);
+        const switchAzimuth = nextBodyAzimuth + Math.PI * 2 * Math.ceil((azimuth - nextBodyAzimuth) / (Math.PI * 2));
+
+        if (bodyIndex === firstBodyIndex) {
+            ctx.moveTo(pos.x + Math.cos(azimuth) * radius, pos.y + Math.sin(azimuth) * radius);
+        }
+
+        while (segmentIndex < 150) {
+            segmentIndex += 1;
+
+            const nextAzimuth = azimuth + azimuthIncrement;
+
+            if (nextAzimuth > switchAzimuth) {
+                azimuth = nextBodyAzimuth + Math.PI - (nextAzimuth - switchAzimuth); // flip to other side and anticipate leftover distance
+                break;
+            }
+
+            azimuth = nextAzimuth;
+            ctx.lineTo(pos.x + Math.cos(azimuth) * radius, pos.y + Math.sin(azimuth) * radius);
+        }
+
+        bodyIndex -= 1;
+    }
+
+    ctx.stroke();
 
     ctx.restore();
 
