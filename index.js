@@ -10,7 +10,7 @@ class BannerWorld {
         };
 
         this._world = new planck.World({
-            gravity: planck.Vec2(0.05, 0)
+            gravity: planck.Vec2(0.1, 0)
         });
 
         this._ground = this._world.createBody();
@@ -39,10 +39,10 @@ class BannerWorld {
             if (readyForSpawn) {
                 this._spawnCountdown += 0.4;
 
-                const radius = 0.2;
-                const body = world.createDynamicBody(planck.Vec2(radius, this._startingDirection * (-0.2 + Math.random() * 0.1)))
+                const radius = 0.3;
+                const body = world.createDynamicBody(planck.Vec2(radius, this._startingDirection * (-radius + Math.random() * 0.1)))
                 const fixture = body.createFixture(planck.Circle(radius), this._ballFD);
-                body.setLinearVelocity(planck.Vec2(0.75, this._startingDirection * Math.random() * 0.2));
+                body.setLinearVelocity(planck.Vec2(1.2, this._startingDirection * Math.random() * 2.0));
 
                 body.data = {
                     prevJoint: null,
@@ -153,7 +153,7 @@ function renderer() {
 
     ctx.moveTo(0, 0);
 
-    const segmentDistance = 0.1;
+    const segmentDistance = 0.2;
     let segmentIndex = 0;
 
     let direction = -main._startingDirection; // first body gets the proper winding direction
