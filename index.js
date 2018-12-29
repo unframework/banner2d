@@ -40,9 +40,9 @@ class BannerWorld {
                 this._spawnCountdown += 0.4;
 
                 const radius = 0.2;
-                const body = world.createDynamicBody(planck.Vec2(radius, -this._startingDirection * (0.5 + Math.random() * 0.1)))
+                const body = world.createDynamicBody(planck.Vec2(radius, this._startingDirection * (1.5 + Math.random() * 0.1)))
                 const fixture = body.createFixture(planck.Circle(radius), this._ballFD);
-                body.setLinearVelocity(planck.Vec2(1.5, this._startingDirection * Math.random() * 1.5));
+                body.setLinearVelocity(planck.Vec2(1.5, -this._startingDirection * Math.random() * 1.5));
 
                 body.data = {
                     prevJoint: null,
@@ -143,7 +143,7 @@ function renderer() {
     ctx.save();
 
     ctx.translate(bufferWidth / 2, bufferHeight / 2);
-    ctx.scale(bufferHeight / 20, bufferHeight / 20);
+    ctx.scale(bufferHeight / 20, -bufferHeight / 20);
 
     const firstBodyIndex = main._bodyList.length - 1;
     const firstBody = main._bodyList[firstBodyIndex];
@@ -151,7 +151,7 @@ function renderer() {
 
     let bodyIndex = firstBodyIndex;
     let segmentIndex = 0;
-    let azimuth = main._startingDirection * (Math.atan2(firstPos.y, firstPos.x) - Math.PI / 2);
+    let azimuth = Math.atan2(firstPos.y, firstPos.x) + Math.PI + main._startingDirection * Math.PI / 2;
     let direction = main._startingDirection;
     const segmentDistance = 0.15;
 
@@ -209,6 +209,12 @@ function renderer() {
     }
 
     ctx.stroke();
+
+    main._bodyList.forEach(body => {
+        const pos = body.getPosition();
+        ctx.fillStyle = '#0f0';
+        ctx.fillRect(pos.x - 0.05, pos.y - 0.05, 0.1, 0.1);
+    });
 
     ctx.restore();
 
