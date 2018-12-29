@@ -171,8 +171,9 @@ function renderer() {
             const remainder = direction * (nextAzimuth - switchAzimuth);
 
             if (remainder > 0) {
+                // flip to other side and anticipate leftover distance (for the new radius)
                 direction = -direction;
-                azimuth = nextBodyAzimuth + Math.PI + remainder; // flip to other side and anticipate leftover distance
+                azimuth = nextBodyAzimuth + Math.PI - (azimuth - switchAzimuth) * radius / nextBody.data.radius;
                 break;
             }
 
