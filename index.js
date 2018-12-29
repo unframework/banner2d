@@ -154,6 +154,7 @@ function renderer() {
     ctx.moveTo(0, 0);
 
     const segmentDistance = 0.2;
+    const segmentCount = 150;
     let segmentIndex = 0;
 
     let direction = -main._startingDirection; // first body gets the proper winding direction
@@ -186,9 +187,7 @@ function renderer() {
         if (br > 0) {
             const azimuthIncrement = direction * segmentDistance / br;
 
-            while (segmentIndex < 200) {
-                segmentIndex += 1;
-
+            while (segmentIndex < segmentCount) {
                 const nextAzimuth = azimuth + azimuthIncrement;
 
                 if (direction * (nextAzimuth - switchAzimuth) > 0) {
@@ -197,6 +196,7 @@ function renderer() {
 
                 azimuth = nextAzimuth;
                 ctx.lineTo(bx + Math.cos(azimuth) * br, by + Math.sin(azimuth) * br);
+                segmentIndex += 1;
             }
         }
 
@@ -204,18 +204,23 @@ function renderer() {
         const distanceLeftInArc = direction * (switchAzimuth - azimuth) * br;
         const distanceUntilNextArc = distanceLeftInArc + alongDistance;
         const straightSegmentCount = Math.floor(distanceUntilNextArc / segmentDistance);
+        const displayedSegmentCount = Math.min(straightSegmentCount, segmentCount - segmentIndex);
+        const endCos = Math.cos(nextBodyAzimuth);
+        const endSin = Math.sin(nextBodyAzimuth);
 
-        if (segmentIndex < 200 && straightSegmentCount > 0) {
-            // draw to first segment point on the line
-            const endCos = Math.cos(nextBodyAzimuth);
-            const endSin = Math.sin(nextBodyAzimuth);
-            const firstSegmentLinearTravel = direction * alongDistance;// segmentDistance - distanceLeftInArc;
+        // draw to first segment point on the line
+        if (displayedSegmentCount > 0) {
+            const firstSegmentLinearTravel = direction * (segmentDistance - distanceLeftInArc);
             ctx.lineTo(bx + endCos * br - endSin * firstSegmentLinearTravel, by + endSin * br + endCos * firstSegmentLinearTravel);
-
-            // @todo end segment, if possible
-
-            segmentIndex += straightSegmentCount;
         }
+
+        // draw to last segment point on the line
+        if (displayedSegmentCount > 1) {
+            const lastSegmentLinearTravel = direction * (segmentDistance * displayedSegmentCount - distanceLeftInArc);
+            ctx.lineTo(bx + endCos * br - endSin * lastSegmentLinearTravel, by + endSin * br + endCos * lastSegmentLinearTravel);
+        }
+
+        segmentIndex += displayedSegmentCount;
 
         const nextAzimuthAdjustDistance = distanceUntilNextArc - straightSegmentCount * segmentDistance;
         const nextDirection = -direction;
