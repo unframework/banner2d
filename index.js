@@ -191,12 +191,12 @@ function renderer() {
 
             if (remainder > 0) {
                 // flip to other side and anticipate leftover distance (for the new radius)
-                const leftoverDistance = (azimuth - switchAzimuth) * radius + alongDistance;
+                const leftoverDistance = direction * (azimuth - switchAzimuth) * radius + alongDistance;
                 const straightSegmentCount = Math.floor(leftoverDistance / segmentDistance);
                 segmentIndex += straightSegmentCount;
                 const nextAzimuthAdjustDistance = leftoverDistance - straightSegmentCount * segmentDistance;
 
-                azimuth = nextBodyAzimuth + Math.PI - nextAzimuthAdjustDistance / nextRadius;
+                azimuth = nextBodyAzimuth + Math.PI - direction * nextAzimuthAdjustDistance / nextRadius;
                 direction = -direction;
                 break;
             }
