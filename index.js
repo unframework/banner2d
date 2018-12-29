@@ -160,6 +160,7 @@ function renderer() {
     let direction = -main._startingDirection; // first body gets the proper winding direction
     let bx = 0, by = 0, br = 0;
     let azimuth = 0;
+    let distanceLeft = 0;
     let nextBodyIndex = main._bodyList.length - 1;
 
     while (nextBodyIndex >= 0) {
@@ -177,32 +178,32 @@ function renderer() {
         const alongDistance = Math.sqrt(distance * distance - projectedDistance * projectedDistance);
 
         const alphaSine = projectedDistance / distance;
-        const nextBodyAzimuth = nextBodyDirection - direction * (Math.PI / 2 - Math.asin(alphaSine));
+        const arcEndAzimuth = nextBodyDirection - direction * (Math.PI / 2 - Math.asin(alphaSine));
 
-        // end of arc, adjusted to be always "ahead" of the starting azimuth
-        // @todo in wraparound cases (even though they are avoided) this "flickers" depending on segment phase?
-        const extraRotations = Math.ceil(direction * (azimuth - nextBodyAzimuth) / (Math.PI * 2));
-        const switchAzimuth = nextBodyAzimuth + direction * Math.PI * 2 * extraRotations;
+        // ensure end of arc is always "ahead" of the starting azimuth
+        const arcAzimuthDelta = arcEndAzimuth - azimuth;
+        const extraRotations = -Math.floor(direction * arcAzimuthDelta / (Math.PI * 2));
+        const arcLength = direction * (arcAzimuthDelta + direction * extraRotations * Math.PI * 2) * br;
 
-        const arcLength = direction * (switchAzimuth - azimuth) * br;
-        const arcSegmentCount = Math.floor(arcLength / segmentDistance);
+        const distanceUntilStraightPortion = distanceLeft + arcLength;
+        const arcSegmentCount = Math.floor(distanceUntilStraightPortion / segmentDistance);
         const displayedArcSegmentCount = Math.min(arcSegmentCount, segmentCount - segmentIndex);
 
         // step through arc segments, drawing line to end of each one (hence 1-based loop)
         for (let i = 1; i <= displayedArcSegmentCount; i += 1) {
-            const segmentAzimuth = azimuth + direction * i * segmentDistance / br;
+            const segmentAzimuth = azimuth + direction * (i * segmentDistance - distanceLeft) / br;
             ctx.lineTo(bx + Math.cos(segmentAzimuth) * br, by + Math.sin(segmentAzimuth) * br);
         }
 
         segmentIndex += displayedArcSegmentCount;
 
         // step through the linear portion
-        const distanceLeftInArc = arcLength - arcSegmentCount * segmentDistance;
+        const distanceLeftInArc = distanceUntilStraightPortion - arcSegmentCount * segmentDistance;
         const distanceUntilNextArc = distanceLeftInArc + alongDistance;
         const straightSegmentCount = Math.floor(distanceUntilNextArc / segmentDistance);
         const displayedStraightSegmentCount = Math.min(straightSegmentCount, segmentCount - segmentIndex);
-        const endCos = Math.cos(nextBodyAzimuth);
-        const endSin = Math.sin(nextBodyAzimuth);
+        const endCos = Math.cos(arcEndAzimuth);
+        const endSin = Math.sin(arcEndAzimuth);
 
         // draw to first segment point on the line
         if (displayedStraightSegmentCount > 0) {
@@ -218,14 +219,12 @@ function renderer() {
 
         segmentIndex += displayedStraightSegmentCount;
 
-        const nextAzimuthAdjustDistance = distanceUntilNextArc - straightSegmentCount * segmentDistance;
-        const nextDirection = -direction;
-
         bx = nextPos.x;
         by = nextPos.y;
         br = nextRadius;
-        azimuth = nextBodyAzimuth + Math.PI - nextDirection * nextAzimuthAdjustDistance / nextRadius;
-        direction = nextDirection;
+        azimuth = arcEndAzimuth + Math.PI; // next arc starts at opposite side of circle
+        distanceLeft = distanceUntilNextArc - straightSegmentCount * segmentDistance;
+        direction = -direction;
         nextBodyIndex -= 1;
     }
 
