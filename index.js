@@ -34,13 +34,13 @@ class BannerWorld {
 
         if (this._spawnCountdown < 0) {
             // check if spawn area is too crowded
-            const readyForSpawn = bodyList.length === 0 || bodyList[bodyList.length - 1].getPosition().x - bodyList[bodyList.length - 1].data.radius > 0.5;
+            const readyForSpawn = bodyList.length === 0 || bodyList[bodyList.length - 1].getPosition().x - bodyList[bodyList.length - 1].data.radius > 0.6;
 
             if (readyForSpawn) {
                 this._spawnCountdown += 0.4;
 
                 const radius = 0.2;
-                const body = world.createDynamicBody(planck.Vec2(0, Math.random() * 0.1 - 0.05))
+                const body = world.createDynamicBody(planck.Vec2(radius, -this._startingDirection * (0.5 + Math.random() * 0.1)))
                 const fixture = body.createFixture(planck.Circle(radius), this._ballFD);
                 body.setLinearVelocity(planck.Vec2(1.5, this._startingDirection * Math.random() * 1.5));
 
@@ -146,11 +146,14 @@ function renderer() {
     ctx.scale(bufferHeight / 20, bufferHeight / 20);
 
     const firstBodyIndex = main._bodyList.length - 1;
+    const firstBody = main._bodyList[firstBodyIndex];
+    const firstPos = firstBody.getPosition();
+
     let bodyIndex = firstBodyIndex;
     let segmentIndex = 0;
-    let azimuth = Math.PI;
+    let azimuth = main._startingDirection * (Math.atan2(firstPos.y, firstPos.x) - Math.PI / 2);
     let direction = main._startingDirection;
-    const segmentDistance = 0.3;
+    const segmentDistance = 0.15;
 
     ctx.lineWidth = 0.05;
     ctx.miterLimit = 2;
@@ -158,22 +161,29 @@ function renderer() {
 
     ctx.beginPath();
 
+    ctx.moveTo(0, 0);
+
     while (bodyIndex > 0) {
         const body = main._bodyList[bodyIndex];
         const pos = body.getPosition();
-        const radius = body.data.radius;
+        const radius = body.data.radius - 0.1;
         const azimuthIncrement = direction * segmentDistance / radius;
 
         const nextBody = main._bodyList[bodyIndex - 1];
         const nextPos = nextBody.getPosition();
-        const nextBodyAzimuth = Math.atan2(nextPos.y - pos.y, nextPos.x - pos.x);
+        const nextRadius = nextBody.data.radius - 0.1;
+        const nextBodyDirection = Math.atan2(nextPos.y - pos.y, nextPos.x - pos.x);
+
+        const distance = planck.Vec2.distance(pos, nextPos);
+        const projectedDistance = Math.min(distance, radius + nextRadius);
+        const alphaSine = projectedDistance / distance;
+        const adjust = Math.PI / 2 - Math.asin(alphaSine);
+        const nextBodyAzimuth = nextBodyDirection - direction * adjust;
+        const alongDistance = Math.sqrt(distance * distance - projectedDistance * projectedDistance);
+
         const switchAzimuth = nextBodyAzimuth + Math.PI * 2 * Math.ceil(direction * (azimuth - nextBodyAzimuth) / (Math.PI * 2));
 
-        if (bodyIndex === firstBodyIndex) {
-            ctx.moveTo(pos.x + Math.cos(azimuth) * radius, pos.y + Math.sin(azimuth) * radius);
-        }
-
-        while (segmentIndex < 150) {
+        while (segmentIndex < 200) {
             segmentIndex += 1;
 
             const nextAzimuth = azimuth + azimuthIncrement;
@@ -181,8 +191,13 @@ function renderer() {
 
             if (remainder > 0) {
                 // flip to other side and anticipate leftover distance (for the new radius)
+                const leftoverDistance = (azimuth - switchAzimuth) * radius + alongDistance;
+                const straightSegmentCount = Math.floor(leftoverDistance / segmentDistance);
+                segmentIndex += straightSegmentCount;
+                const nextAzimuthAdjustDistance = leftoverDistance - straightSegmentCount * segmentDistance;
+
+                azimuth = nextBodyAzimuth + Math.PI - nextAzimuthAdjustDistance / nextRadius;
                 direction = -direction;
-                azimuth = nextBodyAzimuth + Math.PI - (azimuth - switchAzimuth) * radius / nextBody.data.radius;
                 break;
             }
 
@@ -200,18 +215,18 @@ function renderer() {
     window.requestAnimationFrame(renderer);
 }
 
-// renderer();
+renderer();
 
-planck.testbed('Banner', function (testbed) {
-    testbed.step = function (dtms) {
-        const dt = dtms / 1000;
+// planck.testbed('Banner', function (testbed) {
+//     testbed.step = function (dtms) {
+//         const dt = dtms / 1000;
 
-        main.step(dt);
-    };
+//         main.step(dt);
+//     };
 
-    testbed.x = 0;
-    testbed.y = 0;
-    testbed.info('Banner animation');
+//     testbed.x = 0;
+//     testbed.y = 0;
+//     testbed.info('Banner animation');
 
-    return main._world;
-});
+//     return main._world;
+// });
