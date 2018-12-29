@@ -14,6 +14,7 @@ class BannerWorld {
         });
 
         this._bodyList = [];
+        this._startingDirection = 1;
 
         this._spawnCountdown = 0;
     }
@@ -58,6 +59,7 @@ class BannerWorld {
                 }
 
                 bodyList.push(body);
+                this._startingDirection = -this._startingDirection;
             } else {
                 this._spawnCountdown += 0.1; // do another check soon
             }
@@ -138,6 +140,7 @@ function renderer() {
     let bodyIndex = firstBodyIndex;
     let segmentIndex = 0;
     let azimuth = Math.PI;
+    let direction = main._startingDirection;
     const segmentDistance = 0.3;
 
     ctx.lineWidth = 0.05;
@@ -150,12 +153,12 @@ function renderer() {
         const body = main._bodyList[bodyIndex];
         const pos = body.getPosition();
         const radius = body.data.radius;
-        const azimuthIncrement = segmentDistance / radius;
+        const azimuthIncrement = direction * segmentDistance / radius;
 
         const nextBody = main._bodyList[bodyIndex - 1];
         const nextPos = nextBody.getPosition();
         const nextBodyAzimuth = Math.atan2(nextPos.y - pos.y, nextPos.x - pos.x);
-        const switchAzimuth = nextBodyAzimuth + Math.PI * 2 * Math.ceil((azimuth - nextBodyAzimuth) / (Math.PI * 2));
+        const switchAzimuth = nextBodyAzimuth + Math.PI * 2 * Math.ceil(direction * (azimuth - nextBodyAzimuth) / (Math.PI * 2));
 
         if (bodyIndex === firstBodyIndex) {
             ctx.moveTo(pos.x + Math.cos(azimuth) * radius, pos.y + Math.sin(azimuth) * radius);
@@ -165,9 +168,11 @@ function renderer() {
             segmentIndex += 1;
 
             const nextAzimuth = azimuth + azimuthIncrement;
+            const remainder = direction * (nextAzimuth - switchAzimuth);
 
-            if (nextAzimuth > switchAzimuth) {
-                azimuth = nextBodyAzimuth + Math.PI - (nextAzimuth - switchAzimuth); // flip to other side and anticipate leftover distance
+            if (remainder > 0) {
+                direction = -direction;
+                azimuth = nextBodyAzimuth + Math.PI + remainder; // flip to other side and anticipate leftover distance
                 break;
             }
 
