@@ -42,7 +42,7 @@ class BannerWorld {
                 const radius = 0.3;
                 const body = world.createDynamicBody(planck.Vec2(radius, this._startingDirection * (-radius + Math.random() * 0.1)))
                 const fixture = body.createFixture(planck.Circle(radius), this._ballFD);
-                body.setLinearVelocity(planck.Vec2(1.2, this._startingDirection * Math.random() * 2.0));
+                body.setLinearVelocity(planck.Vec2(1.2, this._startingDirection * (0.5 + Math.random() * 1.5)));
 
                 body.data = {
                     prevJoint: null,
@@ -63,7 +63,7 @@ class BannerWorld {
                         localAnchorA: planck.Vec2(0, 0),
                         bodyB: body,
                         localAnchorB: planck.Vec2(0, 0),
-                        length: prevBody.data.radius + radius
+                        length: (prevBody.data.radius + radius) * 1.3
                     }));
                 }
 
@@ -81,7 +81,7 @@ class BannerWorld {
             if (body.data.sizeCountdown < 0) {
                 body.data.sizeCountdown += 0.1 + Math.random() * 0.3;
 
-                const nextRadius = body.data.radius + (2 - body.data.radius) * Math.random() * 0.05;
+                const nextRadius = body.data.radius + (1.5 - body.data.radius) * Math.random() * 0.05;
                 const nextFixture = body.createFixture(planck.Circle(nextRadius), this._ballFD);
 
                 body.destroyFixture(body.data.fixture);
@@ -91,12 +91,12 @@ class BannerWorld {
 
                 if (index > 0) {
                     const prevBody = bodyList[index - 1];
-                    body.data.prevJoint.setLength(prevBody.data.radius + nextRadius);
+                    body.data.prevJoint.setLength((prevBody.data.radius + nextRadius) * 1.3);
                 }
 
                 if (index < bodyList.length - 1) {
                     const nextBody = bodyList[index + 1];
-                    body.data.nextJoint.setLength(nextBody.data.radius + nextRadius);
+                    body.data.nextJoint.setLength((nextBody.data.radius + nextRadius) * 1.3);
                 }
             }
         });
@@ -106,7 +106,7 @@ class BannerWorld {
             const lastBody = bodyList[0];
             const position = lastBody.getPosition();
 
-            if (position.x > 20) {
+            if (position.x > 30) {
                 world.destroyBody(lastBody);
                 bodyList.splice(0, 1);
             }
@@ -143,7 +143,8 @@ function renderer() {
     ctx.save();
 
     ctx.translate(bufferWidth / 2, bufferHeight / 2);
-    ctx.scale(bufferHeight / 20, -bufferHeight / 20);
+    ctx.scale(bufferHeight / 25, -bufferHeight / 25);
+    ctx.translate(-10, 0);
 
     ctx.lineWidth = 0.05;
     ctx.miterLimit = 2;
@@ -153,7 +154,7 @@ function renderer() {
 
     ctx.moveTo(0, 0);
 
-    const segmentTravel = 0.2;
+    const segmentTravel = 0.4;
     const segmentCount = 150;
     let segmentIndex = 0;
 
@@ -167,7 +168,7 @@ function renderer() {
         // determine arc and line segment towards next body
         const nextBody = main._bodyList[nextBodyIndex];
         const nextPos = nextBody.getPosition();
-        const nextRadius = nextBody.data.radius - 0.1;
+        const nextRadius = nextBody.data.radius - 0.15;
 
         const dx = nextPos.x - bx;
         const dy = nextPos.y - by;
