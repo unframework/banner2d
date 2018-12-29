@@ -10,7 +10,7 @@ class BannerWorld {
         };
 
         this._world = new planck.World({
-            gravity: planck.Vec2(0.1, 0)
+            gravity: planck.Vec2(0.05, 0)
         });
 
         this._ground = this._world.createBody();
@@ -40,9 +40,9 @@ class BannerWorld {
                 this._spawnCountdown += 0.4;
 
                 const radius = 0.2;
-                const body = world.createDynamicBody(planck.Vec2(radius, this._startingDirection * (1.5 + Math.random() * 0.1)))
+                const body = world.createDynamicBody(planck.Vec2(radius, this._startingDirection * (-0.2 + Math.random() * 0.1)))
                 const fixture = body.createFixture(planck.Circle(radius), this._ballFD);
-                body.setLinearVelocity(planck.Vec2(1.5, -this._startingDirection * Math.random() * 1.5));
+                body.setLinearVelocity(planck.Vec2(0.75, this._startingDirection * Math.random() * 0.2));
 
                 body.data = {
                     prevJoint: null,
@@ -145,16 +145,6 @@ function renderer() {
     ctx.translate(bufferWidth / 2, bufferHeight / 2);
     ctx.scale(bufferHeight / 20, -bufferHeight / 20);
 
-    const firstBodyIndex = main._bodyList.length - 1;
-    const firstBody = main._bodyList[firstBodyIndex];
-    const firstPos = firstBody.getPosition();
-
-    let bodyIndex = firstBodyIndex;
-    let segmentIndex = 0;
-    let azimuth = Math.atan2(firstPos.y, firstPos.x) + Math.PI + main._startingDirection * Math.PI / 2;
-    let direction = main._startingDirection;
-    const segmentDistance = 0.15;
-
     ctx.lineWidth = 0.05;
     ctx.miterLimit = 2;
     ctx.strokeStyle = '#f00';
@@ -163,49 +153,79 @@ function renderer() {
 
     ctx.moveTo(0, 0);
 
-    while (bodyIndex > 0) {
-        const body = main._bodyList[bodyIndex];
-        const pos = body.getPosition();
-        const radius = body.data.radius - 0.1;
-        const azimuthIncrement = direction * segmentDistance / radius;
+    const segmentDistance = 0.1;
+    let segmentIndex = 0;
 
-        const nextBody = main._bodyList[bodyIndex - 1];
+    let direction = -main._startingDirection; // first body gets the proper winding direction
+    let bx = 0, by = 0, br = 0;
+    let azimuth = 0;
+    let nextBodyIndex = main._bodyList.length - 1;
+
+    while (nextBodyIndex >= 0) {
+        // determine arc and line segment towards next body
+        const nextBody = main._bodyList[nextBodyIndex];
         const nextPos = nextBody.getPosition();
         const nextRadius = nextBody.data.radius - 0.1;
-        const nextBodyDirection = Math.atan2(nextPos.y - pos.y, nextPos.x - pos.x);
 
-        const distance = planck.Vec2.distance(pos, nextPos);
-        const projectedDistance = Math.min(distance, radius + nextRadius);
-        const alphaSine = projectedDistance / distance;
-        const adjust = Math.PI / 2 - Math.asin(alphaSine);
-        const nextBodyAzimuth = nextBodyDirection - direction * adjust;
+        const dx = nextPos.x - bx;
+        const dy = nextPos.y - by;
+        const nextBodyDirection = Math.atan2(dy, dx);
+
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const projectedDistance = Math.min(distance, br + nextRadius);
         const alongDistance = Math.sqrt(distance * distance - projectedDistance * projectedDistance);
 
-        const switchAzimuth = nextBodyAzimuth + Math.PI * 2 * Math.ceil(direction * (azimuth - nextBodyAzimuth) / (Math.PI * 2));
+        const alphaSine = projectedDistance / distance;
+        const nextBodyAzimuth = nextBodyDirection - direction * (Math.PI / 2 - Math.asin(alphaSine));
 
-        while (segmentIndex < 200) {
-            segmentIndex += 1;
+        // end of arc, adjusted to be always "ahead" of the starting azimuth
+        const extraRotations = Math.ceil(direction * (azimuth - nextBodyAzimuth) / (Math.PI * 2));
+        const switchAzimuth = nextBodyAzimuth + direction * Math.PI * 2 * extraRotations;
 
-            const nextAzimuth = azimuth + azimuthIncrement;
-            const remainder = direction * (nextAzimuth - switchAzimuth);
+        // step through the arc
+        if (br > 0) {
+            const azimuthIncrement = direction * segmentDistance / br;
 
-            if (remainder > 0) {
-                // flip to other side and anticipate leftover distance (for the new radius)
-                const leftoverDistance = direction * (azimuth - switchAzimuth) * radius + alongDistance;
-                const straightSegmentCount = Math.floor(leftoverDistance / segmentDistance);
-                segmentIndex += straightSegmentCount;
-                const nextAzimuthAdjustDistance = leftoverDistance - straightSegmentCount * segmentDistance;
+            while (segmentIndex < 200) {
+                segmentIndex += 1;
 
-                azimuth = nextBodyAzimuth + Math.PI - direction * nextAzimuthAdjustDistance / nextRadius;
-                direction = -direction;
-                break;
+                const nextAzimuth = azimuth + azimuthIncrement;
+
+                if (direction * (nextAzimuth - switchAzimuth) > 0) {
+                    break;
+                }
+
+                azimuth = nextAzimuth;
+                ctx.lineTo(bx + Math.cos(azimuth) * br, by + Math.sin(azimuth) * br);
             }
-
-            azimuth = nextAzimuth;
-            ctx.lineTo(pos.x + Math.cos(azimuth) * radius, pos.y + Math.sin(azimuth) * radius);
         }
 
-        bodyIndex -= 1;
+        // step through the linear portion
+        const distanceLeftInArc = direction * (switchAzimuth - azimuth) * br;
+        const distanceUntilNextArc = distanceLeftInArc + alongDistance;
+        const straightSegmentCount = Math.floor(distanceUntilNextArc / segmentDistance);
+
+        if (segmentIndex < 200 && straightSegmentCount > 0) {
+            // draw to first segment point on the line
+            const endCos = Math.cos(nextBodyAzimuth);
+            const endSin = Math.sin(nextBodyAzimuth);
+            const firstSegmentLinearTravel = direction * alongDistance;// segmentDistance - distanceLeftInArc;
+            ctx.lineTo(bx + endCos * br - endSin * firstSegmentLinearTravel, by + endSin * br + endCos * firstSegmentLinearTravel);
+
+            // @todo end segment, if possible
+
+            segmentIndex += straightSegmentCount;
+        }
+
+        const nextAzimuthAdjustDistance = distanceUntilNextArc - straightSegmentCount * segmentDistance;
+        const nextDirection = -direction;
+
+        bx = nextPos.x;
+        by = nextPos.y;
+        br = nextRadius;
+        azimuth = nextBodyAzimuth + Math.PI - nextDirection * nextAzimuthAdjustDistance / nextRadius;
+        direction = nextDirection;
+        nextBodyIndex -= 1;
     }
 
     ctx.stroke();
