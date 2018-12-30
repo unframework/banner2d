@@ -141,27 +141,14 @@ Array.apply(null, new Array(800)).forEach(() => {
     main.step(dt);
 });
 
+const pointTmp = [];
+
 function renderer() {
     const dt = 1 / 60.0;
     main._world.step(dt);
     main.step(dt);
 
-    ctx.fillStyle = '#222';
-    ctx.fillRect(0, 0, bufferWidth, bufferHeight);
-
-    ctx.save();
-
-    ctx.translate(bufferWidth / 2, bufferHeight / 2);
-    ctx.scale(bufferHeight / 25, -bufferHeight / 25);
-    ctx.translate(-10, 0);
-
-    ctx.lineWidth = 0.05;
-    ctx.miterLimit = 2;
-    ctx.strokeStyle = '#f00';
-
-    ctx.beginPath();
-
-    ctx.moveTo(0, 0);
+    pointTmp.length = 0;
 
     const segmentTravel = 0.4;
     const segmentCount = 150;
@@ -202,7 +189,8 @@ function renderer() {
         // step through arc segments, drawing line to end of each one (hence 1-based loop)
         for (let i = 1; i <= displayedArcSegmentCount; i += 1) {
             const segmentAzimuth = azimuth + direction * (i * segmentTravel - travelLeft) / br;
-            ctx.lineTo(bx + Math.cos(segmentAzimuth) * br, by + Math.sin(segmentAzimuth) * br);
+            pointTmp.push(bx + Math.cos(segmentAzimuth) * br);
+            pointTmp.push(by + Math.sin(segmentAzimuth) * br);
         }
 
         segmentIndex += displayedArcSegmentCount;
@@ -218,13 +206,15 @@ function renderer() {
         // draw to first segment point on the line
         if (displayedStraightSegmentCount > 0) {
             const firstSegmentLinearTravel = direction * (segmentTravel - travelLeftInArc);
-            ctx.lineTo(bx + endCos * br - endSin * firstSegmentLinearTravel, by + endSin * br + endCos * firstSegmentLinearTravel);
+            pointTmp.push(bx + endCos * br - endSin * firstSegmentLinearTravel);
+            pointTmp.push(by + endSin * br + endCos * firstSegmentLinearTravel);
         }
 
         // draw to last segment point on the line
         if (displayedStraightSegmentCount > 1) {
             const lastSegmentLinearTravel = direction * (segmentTravel * displayedStraightSegmentCount - travelLeftInArc);
-            ctx.lineTo(bx + endCos * br - endSin * lastSegmentLinearTravel, by + endSin * br + endCos * lastSegmentLinearTravel);
+            pointTmp.push(bx + endCos * br - endSin * lastSegmentLinearTravel);
+            pointTmp.push(by + endSin * br + endCos * lastSegmentLinearTravel);
         }
 
         segmentIndex += displayedStraightSegmentCount;
@@ -236,6 +226,30 @@ function renderer() {
         travelLeft = travelUntilNextArc - straightSegmentCount * segmentTravel;
         direction = -direction;
         nextBodyIndex -= 1;
+    }
+
+    ctx.fillStyle = '#222';
+    ctx.fillRect(0, 0, bufferWidth, bufferHeight);
+
+    ctx.save();
+
+    ctx.translate(bufferWidth / 2, bufferHeight / 2);
+    ctx.scale(bufferHeight / 25, -bufferHeight / 25);
+    ctx.translate(-10, 0);
+
+    ctx.lineWidth = 0.05;
+    ctx.miterLimit = 2;
+    ctx.strokeStyle = '#f00';
+
+    ctx.beginPath();
+
+    ctx.moveTo(0, 0);
+
+    for (let i = 0; i < pointTmp.length; i += 2) {
+        const x = pointTmp[i];
+        const y = pointTmp[i + 1];
+
+        ctx.lineTo(x, y);
     }
 
     ctx.stroke();
