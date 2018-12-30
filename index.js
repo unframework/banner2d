@@ -55,6 +55,7 @@ class BannerWorld {
                 if (bodyList.length > 0) {
                     const prevBody = bodyList[bodyList.length - 1];
 
+                    // @todo consider also a rotation joint to keep folds in the right order
                     prevBody.data.nextJoint = body.data.prevJoint = world.createJoint(planck.DistanceJoint({
                         collideConnected: true, // rigid minimum distance
                         frequencyHz: 0.2,
@@ -131,6 +132,14 @@ canvas.height = bufferHeight;
 const ctx = canvas.getContext('2d');
 
 const main = new BannerWorld();
+
+// pre-simulate to get some length going
+// @todo spread out over a few frames
+Array.apply(null, new Array(800)).forEach(() => {
+    const dt = 1 / 60.0;
+    main._world.step(dt);
+    main.step(dt);
+});
 
 function renderer() {
     const dt = 1 / 60.0;
