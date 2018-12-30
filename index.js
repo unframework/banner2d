@@ -141,14 +141,18 @@ Array.apply(null, new Array(800)).forEach(() => {
     main.step(dt);
 });
 
-const pointTmp = [];
+const pointXTmp = [];
+const pointYTmp = [];
+const pointITmp = [];
 
 function renderer() {
     const dt = 1 / 60.0;
     main._world.step(dt);
     main.step(dt);
 
-    pointTmp.length = 0;
+    pointXTmp.length = 0;
+    pointYTmp.length = 0;
+    pointITmp.length = 0;
 
     const segmentTravel = 0.4;
     const segmentCount = 150;
@@ -189,8 +193,9 @@ function renderer() {
         // step through arc segments, drawing line to end of each one (hence 1-based loop)
         for (let i = 1; i <= displayedArcSegmentCount; i += 1) {
             const segmentAzimuth = azimuth + direction * (i * segmentTravel - travelLeft) / br;
-            pointTmp.push(bx + Math.cos(segmentAzimuth) * br);
-            pointTmp.push(by + Math.sin(segmentAzimuth) * br);
+            pointXTmp.push(bx + Math.cos(segmentAzimuth) * br);
+            pointYTmp.push(by + Math.sin(segmentAzimuth) * br);
+            pointITmp.push(pointITmp.length);
         }
 
         segmentIndex += displayedArcSegmentCount;
@@ -206,15 +211,17 @@ function renderer() {
         // draw to first segment point on the line
         if (displayedStraightSegmentCount > 0) {
             const firstSegmentLinearTravel = direction * (segmentTravel - travelLeftInArc);
-            pointTmp.push(bx + endCos * br - endSin * firstSegmentLinearTravel);
-            pointTmp.push(by + endSin * br + endCos * firstSegmentLinearTravel);
+            pointXTmp.push(bx + endCos * br - endSin * firstSegmentLinearTravel);
+            pointYTmp.push(by + endSin * br + endCos * firstSegmentLinearTravel);
+            pointITmp.push(pointITmp.length);
         }
 
         // draw to last segment point on the line
         if (displayedStraightSegmentCount > 1) {
             const lastSegmentLinearTravel = direction * (segmentTravel * displayedStraightSegmentCount - travelLeftInArc);
-            pointTmp.push(bx + endCos * br - endSin * lastSegmentLinearTravel);
-            pointTmp.push(by + endSin * br + endCos * lastSegmentLinearTravel);
+            pointXTmp.push(bx + endCos * br - endSin * lastSegmentLinearTravel);
+            pointYTmp.push(by + endSin * br + endCos * lastSegmentLinearTravel);
+            pointITmp.push(pointITmp.length);
         }
 
         segmentIndex += displayedStraightSegmentCount;
@@ -240,33 +247,32 @@ function renderer() {
     ctx.lineWidth = 0.05;
     ctx.miterLimit = 2;
 
-    let lx = 0;
-    let ly = 0;
+    pointITmp.sort((a, b) => pointYTmp[b] - pointYTmp[a]);
 
-    for (let i = 0; i < pointTmp.length; i += 2) {
-        const x = pointTmp[i];
-        const y = pointTmp[i + 1];
+    for (let i = 0; i < pointITmp.length; i += 1) {
+        const index = pointITmp[i];
+        const lx = index === 0 ? 0 : pointXTmp[index - 1];
+        const ly = index === 0 ? 0 : pointYTmp[index - 1];
+        const x = pointXTmp[index];
+        const y = pointYTmp[index];
 
         const dx = x - lx;
         const dy = y - ly;
 
-        if (dx > 0) {
-            const intensity = dx * dx / (dx * dx + dy * dy);
-            const c = '' + Math.round(intensity * 255);
+        const bias = 0.01 * Math.sign(dx);
 
-            ctx.fillStyle = 'rgb(' + c + ',' + c + ',' + c + ')';
-            ctx.beginPath();
+        const intensity = dx < 0 ? 0.1 : 0.3 + 0.6 * (dx * dx / (dx * dx + dy * dy));
+        const c = '' + Math.round(intensity * 255);
 
-            ctx.moveTo(lx, ly);
-            ctx.lineTo(x, y);
-            ctx.lineTo(x, y - 2);
-            ctx.lineTo(lx, ly - 2);
+        ctx.fillStyle = 'rgb(' + c + ',' + c + ',' + c + ')';
+        ctx.beginPath();
 
-            ctx.fill();
-        }
+        ctx.moveTo(lx - bias, ly);
+        ctx.lineTo(x + bias, y);
+        ctx.lineTo(x + bias, y - 2);
+        ctx.lineTo(lx - bias, ly - 2);
 
-        lx = x;
-        ly = y;
+        ctx.fill();
     }
 
     main._bodyList.forEach(body => {
