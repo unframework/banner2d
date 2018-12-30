@@ -239,20 +239,35 @@ function renderer() {
 
     ctx.lineWidth = 0.05;
     ctx.miterLimit = 2;
-    ctx.strokeStyle = '#f00';
 
-    ctx.beginPath();
-
-    ctx.moveTo(0, 0);
+    let lx = 0;
+    let ly = 0;
 
     for (let i = 0; i < pointTmp.length; i += 2) {
         const x = pointTmp[i];
         const y = pointTmp[i + 1];
 
-        ctx.lineTo(x, y);
-    }
+        const dx = x - lx;
+        const dy = y - ly;
 
-    ctx.stroke();
+        if (dx > 0) {
+            const intensity = dx * dx / (dx * dx + dy * dy);
+            const c = '' + Math.round(intensity * 255);
+
+            ctx.fillStyle = 'rgb(' + c + ',' + c + ',' + c + ')';
+            ctx.beginPath();
+
+            ctx.moveTo(lx, ly);
+            ctx.lineTo(x, y);
+            ctx.lineTo(x, y - 2);
+            ctx.lineTo(lx, ly - 2);
+
+            ctx.fill();
+        }
+
+        lx = x;
+        ly = y;
+    }
 
     main._bodyList.forEach(body => {
         const pos = body.getPosition();
