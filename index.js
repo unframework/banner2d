@@ -1,7 +1,7 @@
 const planck = require('planck-js');
 const onecolor = require('onecolor');
 
-require('planck-js/testbed');
+// require('planck-js/testbed');
 
 class BannerWorld {
     constructor() {
@@ -236,6 +236,8 @@ function renderer() {
         nextBodyIndex -= 1;
     }
 
+    pointITmp.sort((a, b) => pointYTmp[b] - pointYTmp[a]);
+
     // using theme from https://color.adobe.com/Color-Theme-5-color-theme-11764289/
     ctx.fillStyle = '#6FA8BF';
     ctx.fillRect(0, 0, bufferWidth, bufferHeight);
@@ -248,11 +250,24 @@ function renderer() {
     ctx.scale(bufferHeight / 25, -bufferHeight / 25);
     ctx.translate(-10, 0);
 
-    ctx.lineWidth = 0.05;
+    ctx.lineWidth = 0.2;
     ctx.miterLimit = 2;
+    ctx.strokeStyle = '#F2EAE4';
 
-    pointITmp.sort((a, b) => pointYTmp[b] - pointYTmp[a]);
+    // bottom outline behind the main fill
+    ctx.beginPath();
 
+    ctx.moveTo(0, -2);
+
+    for (let i = 0; i < pointXTmp.length; i += 1) {
+        const x = pointXTmp[i];
+        const y = pointYTmp[i] * 0.5;
+        ctx.lineTo(x, y - 2);
+    }
+
+    ctx.stroke();
+
+    // main fill, sorted by depth
     for (let i = 0; i < pointITmp.length; i += 1) {
         const index = pointITmp[i];
         const lx = index === 0 ? 0 : pointXTmp[index - 1];
@@ -275,6 +290,21 @@ function renderer() {
 
         ctx.fill();
     }
+
+    // top outline above fill
+    ctx.lineWidth = 0.1;
+    ctx.beginPath();
+
+    ctx.moveTo(0, -2);
+    ctx.lineTo(0, 0);
+
+    for (let i = 0; i < pointXTmp.length; i += 1) {
+        const x = pointXTmp[i];
+        const y = pointYTmp[i] * 0.5;
+        ctx.lineTo(x, y);
+    }
+
+    ctx.stroke();
 
     // main._bodyList.forEach(body => {
     //     const pos = body.getPosition();
