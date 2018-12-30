@@ -1,4 +1,5 @@
 const planck = require('planck-js');
+const onecolor = require('onecolor');
 
 require('planck-js/testbed');
 
@@ -235,8 +236,11 @@ function renderer() {
         nextBodyIndex -= 1;
     }
 
-    ctx.fillStyle = '#222';
+    // using theme from https://color.adobe.com/Color-Theme-5-color-theme-11764289/
+    ctx.fillStyle = '#6FA8BF';
     ctx.fillRect(0, 0, bufferWidth, bufferHeight);
+
+    const pigmentColor = onecolor('#D94A4A');
 
     ctx.save();
 
@@ -252,19 +256,16 @@ function renderer() {
     for (let i = 0; i < pointITmp.length; i += 1) {
         const index = pointITmp[i];
         const lx = index === 0 ? 0 : pointXTmp[index - 1];
-        const ly = index === 0 ? 0 : pointYTmp[index - 1];
+        const ly = (index === 0 ? 0 : pointYTmp[index - 1]) * 0.5;
         const x = pointXTmp[index];
-        const y = pointYTmp[index];
+        const y = pointYTmp[index] * 0.5;
 
         const dx = x - lx;
         const dy = y - ly;
 
-        const bias = 0.01 * Math.sign(dx);
+        const bias = 0.01 * Math.sign(dx); // pixel bias to avoid visual gaps due to anti-alias
 
-        const intensity = dx < 0 ? 0.1 : 0.3 + 0.6 * (dx * dx / (dx * dx + dy * dy));
-        const c = '' + Math.round(intensity * 255);
-
-        ctx.fillStyle = 'rgb(' + c + ',' + c + ',' + c + ')';
+        ctx.fillStyle = dx < 0 ? '#3E3F59' : pigmentColor.lightness(-(1 - dx * dx / (dx * dx + dy * dy)) * 0.4, true).css();
         ctx.beginPath();
 
         ctx.moveTo(lx - bias, ly);
@@ -275,11 +276,11 @@ function renderer() {
         ctx.fill();
     }
 
-    main._bodyList.forEach(body => {
-        const pos = body.getPosition();
-        ctx.fillStyle = '#0f0';
-        ctx.fillRect(pos.x - 0.05, pos.y - 0.05, 0.1, 0.1);
-    });
+    // main._bodyList.forEach(body => {
+    //     const pos = body.getPosition();
+    //     ctx.fillStyle = '#0f0';
+    //     ctx.fillRect(pos.x - 0.05, pos.y - 0.05, 0.1, 0.1);
+    // });
 
     ctx.restore();
 
